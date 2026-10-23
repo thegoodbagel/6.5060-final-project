@@ -1,0 +1,14 @@
+build*/
+logs/*
+!logs/.gitkeep
+results/raw/*
+results/processed/*
+results/plots/*
+!results/*/.gitkeep
+datasets/raw/*
+datasets/processed/*
+!datasets/*/.gitkeep
+__pycache__/
+.venv/
+.DS_Store
+*.o
