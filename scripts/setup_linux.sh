@@ -87,6 +87,17 @@ if [ "$(uname -s)" != "Linux" ]; then
 fi
 
 CXX_BIN="${CXX:-g++}"
+# $CXX can be inherited from a module/spack environment but point at a path that
+# does not exist here (e.g. inside a container). Fall back to a compiler on PATH.
+if ! have "$CXX_BIN"; then
+  for fallback in g++ c++ clang++; do
+    if have "$fallback"; then
+      warn "CXX='$CXX_BIN' not found; using '$fallback' from PATH instead."
+      CXX_BIN="$fallback"
+      break
+    fi
+  done
+fi
 TMPDIR_SETUP="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR_SETUP"' EXIT
 
