@@ -26,6 +26,7 @@
 set -euo pipefail
 
 MIN_CMAKE="3.16"
+MIN_PYTHON="3.10"
 DO_BUILD=0
 SYSTEM_INSTALL=1
 SKIP_PYTHON=0
@@ -34,42 +35,20 @@ usage() { sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; }
 
 for arg in "$@"; do
   case "$arg" in
-  --build) DO_BUILD=1 ;;
-  --no-system-install) SYSTEM_INSTALL=0 ;;
-  --skip-python) SKIP_PYTHON=1 ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  *)
-    echo "Unknown option: $arg" >&2
-    usage
-    exit 1
-    ;;
+    --build) DO_BUILD=1 ;;
+    --no-system-install) SYSTEM_INSTALL=0 ;;
+    --skip-python) SKIP_PYTHON=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $arg" >&2; usage; exit 1 ;;
   esac
 done
 
 # ---------- helpers ----------
-if [ -t 1 ]; then
-  B=$'\033[1m'
-  G=$'\033[32m'
-  Y=$'\033[33m'
-  R=$'\033[31m'
-  N=$'\033[0m'
-else
-  B=""
-  G=""
-  Y=""
-  R=""
-  N=""
-fi
+if [ -t 1 ]; then B=$'\033[1m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; N=$'\033[0m'; else B=""; G=""; Y=""; R=""; N=""; fi
 step() { echo "${B}==> $*${N}"; }
-ok() { echo "  ${G}ok${N}   $*"; }
+ok()   { echo "  ${G}ok${N}   $*"; }
 warn() { echo "  ${Y}warn${N} $*"; }
-die() {
-  echo "  ${R}fail${N} $*" >&2
-  exit 1
-}
+die()  { echo "  ${R}fail${N} $*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # true if $1 >= $2 (version strings, e.g. ver_ge 3.22.1 3.16)
@@ -104,10 +83,7 @@ trap 'rm -rf "$TMPDIR_SETUP"' EXIT
 # ---------- detect package manager / privileges ----------
 PM=""
 for candidate in apt-get dnf yum pacman zypper; do
-  if have "$candidate"; then
-    PM="$candidate"
-    break
-  fi
+  if have "$candidate"; then PM="$candidate"; break; fi
 done
 
 SUDO=""
@@ -116,19 +92,18 @@ if [ "$SYSTEM_INSTALL" -eq 1 ] && [ -n "$PM" ]; then
   if [ "$(id -u)" -eq 0 ]; then
     CAN_INSTALL=1
   elif have sudo; then
-    SUDO="sudo"
-    CAN_INSTALL=1
+    SUDO="sudo"; CAN_INSTALL=1
   fi
 fi
 
 # ---------- figure out what is missing ----------
 step "Checking system tools"
-MISSING=() # logical names: git compiler make cmake python venv
+MISSING=()   # logical names: git compiler make cmake python venv
 
-have git || MISSING+=(git)
-have "$CXX_BIN" || MISSING+=(compiler)
-have make || MISSING+=(make)
-have python3 || MISSING+=(python)
+have git            || MISSING+=(git)
+have "$CXX_BIN"     || MISSING+=(compiler)
+have make           || MISSING+=(make)
+have python3        || MISSING+=(python)
 if have python3 && ! python3 -c "import venv, ensurepip" >/dev/null 2>&1; then
   MISSING+=(venv)
 fi
@@ -143,30 +118,30 @@ fi
 pkgs_for() {
   local name="$1"
   case "$PM:$name" in
-  apt-get:git) echo git ;;
-  apt-get:compiler | apt-get:make) echo build-essential ;;
-  apt-get:cmake) echo cmake ;;
-  apt-get:python) echo "python3 python3-pip python3-venv" ;;
-  apt-get:venv) echo "python3-venv" ;;
+    apt-get:git) echo git ;;
+    apt-get:compiler|apt-get:make) echo build-essential ;;
+    apt-get:cmake) echo cmake ;;
+    apt-get:python) echo "python3 python3-pip python3-venv" ;;
+    apt-get:venv) echo "python3-venv" ;;
 
-  dnf:git | yum:git) echo git ;;
-  dnf:compiler | yum:compiler) echo gcc-c++ ;;
-  dnf:make | yum:make) echo make ;;
-  dnf:cmake | yum:cmake) echo cmake ;;
-  dnf:python | yum:python) echo "python3 python3-pip" ;;
-  dnf:venv | yum:venv) echo "python3" ;;
+    dnf:git|yum:git) echo git ;;
+    dnf:compiler|yum:compiler) echo gcc-c++ ;;
+    dnf:make|yum:make) echo make ;;
+    dnf:cmake|yum:cmake) echo cmake ;;
+    dnf:python|yum:python) echo "python3 python3-pip" ;;
+    dnf:venv|yum:venv) echo "python3" ;;
 
-  pacman:git) echo git ;;
-  pacman:compiler | pacman:make) echo base-devel ;;
-  pacman:cmake) echo cmake ;;
-  pacman:python | pacman:venv) echo "python python-pip" ;;
+    pacman:git) echo git ;;
+    pacman:compiler|pacman:make) echo base-devel ;;
+    pacman:cmake) echo cmake ;;
+    pacman:python|pacman:venv) echo "python python-pip" ;;
 
-  zypper:git) echo git ;;
-  zypper:compiler) echo gcc-c++ ;;
-  zypper:make) echo make ;;
-  zypper:cmake) echo cmake ;;
-  zypper:python) echo "python3 python3-pip" ;;
-  zypper:venv) echo "python3-virtualenv" ;;
+    zypper:git) echo git ;;
+    zypper:compiler) echo gcc-c++ ;;
+    zypper:make) echo make ;;
+    zypper:cmake) echo cmake ;;
+    zypper:python) echo "python3 python3-pip" ;;
+    zypper:venv) echo "python3-virtualenv" ;;
   esac
 }
 
@@ -183,11 +158,11 @@ else
     mapfile -t PKGS < <(printf '%s\n' "${PKGS[@]}" | awk '!seen[$0]++')
     step "Installing via $PM: ${PKGS[*]}"
     case "$PM" in
-    apt-get) $SUDO apt-get update && $SUDO apt-get install -y "${PKGS[@]}" ;;
-    dnf) $SUDO dnf install -y "${PKGS[@]}" ;;
-    yum) $SUDO yum install -y "${PKGS[@]}" ;;
-    pacman) $SUDO pacman -Sy --needed --noconfirm "${PKGS[@]}" ;;
-    zypper) $SUDO zypper --non-interactive install "${PKGS[@]}" ;;
+      apt-get) $SUDO apt-get update && $SUDO apt-get install -y "${PKGS[@]}" ;;
+      dnf)     $SUDO dnf install -y "${PKGS[@]}" ;;
+      yum)     $SUDO yum install -y "${PKGS[@]}" ;;
+      pacman)  $SUDO pacman -Sy --needed --noconfirm "${PKGS[@]}" ;;
+      zypper)  $SUDO zypper --non-interactive install "${PKGS[@]}" ;;
     esac
   else
     warn "cannot install system packages (no root/sudo, no supported package manager, or --no-system-install)."
@@ -198,14 +173,14 @@ else
 fi
 
 # ---------- hard requirements ----------
-have git || die "git not found."
-have make || die "make not found."
+have git        || die "git not found."
+have make       || die "make not found."
 have "$CXX_BIN" || die "$CXX_BIN not found. Install a C++ compiler (or 'module load gcc')."
-have python3 || die "python3 not found."
+have python3    || die "python3 not found."
 
 # ---------- verify C++20 actually works ----------
 step "Verifying C++20 support ($CXX_BIN)"
-cat >"$TMPDIR_SETUP/cxx20.cpp" <<'EOF'
+cat > "$TMPDIR_SETUP/cxx20.cpp" <<'EOF'
 #include <bit>
 #include <concepts>
 #include <span>
@@ -213,8 +188,8 @@ cat >"$TMPDIR_SETUP/cxx20.cpp" <<'EOF'
 template <std::integral T> int f(T x) { return std::popcount(static_cast<unsigned>(x)); }
 int main() { std::vector<int> v{1, 2, 3}; std::span<int> s(v); return f(7) == 3 && s.size() == 3 ? 0 : 1; }
 EOF
-if "$CXX_BIN" -std=c++20 "$TMPDIR_SETUP/cxx20.cpp" -o "$TMPDIR_SETUP/cxx20" 2>"$TMPDIR_SETUP/cxx20.err" &&
-  "$TMPDIR_SETUP/cxx20"; then
+if "$CXX_BIN" -std=c++20 "$TMPDIR_SETUP/cxx20.cpp" -o "$TMPDIR_SETUP/cxx20" 2>"$TMPDIR_SETUP/cxx20.err" \
+   && "$TMPDIR_SETUP/cxx20"; then
   ok "$("$CXX_BIN" --version | head -n1)"
 else
   cat "$TMPDIR_SETUP/cxx20.err" >&2 || true
@@ -223,7 +198,7 @@ fi
 
 # ---------- verify OpenMP (optional) ----------
 step "Checking OpenMP (optional)"
-cat >"$TMPDIR_SETUP/omp.cpp" <<'EOF'
+cat > "$TMPDIR_SETUP/omp.cpp" <<'EOF'
 #include <omp.h>
 int main() { int n = 0;
 #pragma omp parallel
@@ -233,8 +208,8 @@ int main() { int n = 0;
   }
   return n >= 1 ? 0 : 1; }
 EOF
-if "$CXX_BIN" -std=c++20 -fopenmp "$TMPDIR_SETUP/omp.cpp" -o "$TMPDIR_SETUP/omp" >/dev/null 2>&1 &&
-  "$TMPDIR_SETUP/omp"; then
+if "$CXX_BIN" -std=c++20 -fopenmp "$TMPDIR_SETUP/omp.cpp" -o "$TMPDIR_SETUP/omp" >/dev/null 2>&1 \
+   && "$TMPDIR_SETUP/omp"; then
   ok "OpenMP works"
 else
   warn "OpenMP not available; the project will build single-threaded."
@@ -243,6 +218,13 @@ fi
 
 # ---------- Python environment ----------
 if [ "$SKIP_PYTHON" -eq 0 ]; then
+  step "Checking Python version"
+  PY_VER="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+  if ! ver_ge "$PY_VER" "$MIN_PYTHON"; then
+    die "python3 is $PY_VER but >= $MIN_PYTHON is needed (the system python on RHEL/Rocky clusters is often 3.6). On Engaging: 'module load miniforge' (see 'module avail miniforge python'), delete any old .venv (rm -rf .venv), then re-run."
+  fi
+  ok "python $PY_VER"
+
   step "Setting up Python virtual environment (.venv)"
   if [ ! -d .venv ]; then
     python3 -m venv .venv || die "venv creation failed (on Debian/Ubuntu: sudo apt install python3-venv)."
