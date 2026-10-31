@@ -53,6 +53,11 @@ The Node Ordering algorithm is approximate, while the other algorithms target ex
 │   ├── raw/            # Original datasets
 │   └── processed/      # Preprocessed datasets
 │
+├── docs/
+│   ├── tasks.md        # Task tracker and project plan
+│   ├── digest.md       # Short summary of the current system
+│   └── archive.md      # Detailed setup history, run steps, issue log
+│
 ├── scripts/
 │   ├── setup_linux.sh  # One-shot Linux environment setup
 │   └── submit_slurm.sh # Slurm job script (Engaging)
@@ -70,7 +75,7 @@ The Node Ordering algorithm is approximate, while the other algorithms target ex
 - CMake >= 3.16
 - OpenMP (optional; enables multithreaded execution)
 - Catch2 (testing; downloaded automatically by CMake at configure time, so internet access is needed for the first configure)
-- Python 3 with pandas, NumPy, SciPy, and Matplotlib (analysis)
+- Python >= 3.10 with pandas, NumPy, SciPy, and Matplotlib (analysis)
 
 ## Setup
 
@@ -101,11 +106,11 @@ What the script does:
 - Creates `.venv` and installs `requirements.txt`.
 - Is safe to re-run.
 
-**MIT Engaging / other clusters.** You will not have root, so load toolchain modules first (check exact names with `module avail`), then run the script on the **login node**:
+**MIT Engaging / other clusters.** You will not have root, and the default system Python is too old (3.6), so load toolchain modules first (check exact names with `module avail`), then run the script on the **login node**:
 
 ```bash
-module avail gcc cmake python
-module load gcc cmake        # names may differ
+module avail gcc cmake miniforge
+module load gcc cmake miniforge   # names may differ; miniforge provides a modern Python
 bash scripts/setup_linux.sh --build
 ```
 
@@ -203,6 +208,14 @@ Real-world experiments
 - Evaluate feature-based proxies, including token similarity and TF-IDF cosine similarity.
 
 We record oracle queries, proxy queries, adaptive rounds, runtime, and clustering accuracy where applicable. Results are exported for analysis and visualization using Python.
+
+## Documentation
+
+Project documentation lives in `docs/`:
+
+- [`docs/digest.md`](docs/digest.md): short summary of the current system, key commands, and conventions. Start here.
+- [`docs/tasks.md`](docs/tasks.md): task tracker organized by phase, with status, priorities, and division of work.
+- [`docs/archive.md`](docs/archive.md): detailed record of setup steps, how to run things on macOS and Engaging, the process log, and issues encountered with their fixes.
 
 ## Reproducibility
 
