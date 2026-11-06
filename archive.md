@@ -148,6 +148,42 @@ Older partitions (`sched_*`, `newnodes`) run CentOS 7 and a different software s
 
 - Branching workflow, naming conventions, coding style.
 - Debug/sanitizer build verified.
-- Scratch and persistent storage paths recorded; output transfer between Engaging and local tested.
+- algorithms.
+- `include/core/algorithm.hpp`: common `Algorithm::run(n, Oracle&, Proxy* = nullptr)` interface, `name`, `Query`, `QueryBatch`, `AlgorithmResult` (output `Partition` plus `queries_per_round`). Algorithm settings live in concrete algorithm constructors; benchmark runner handles timing and counter snapshots.
+- `tests/test_proxy_algorithm.cpp`: Catch2 checks symmetry, reproducibility, separation at sigma 0, invalid IDs/parameters, cache and reset semantics, thread safety, optional proxy, and output/round accounting.
+
+Implementation details and conventions:
+
+- `SyntheticProxy::score` validates IDs before counting; proxy cache is optional and persists through `reset_counters`, so cold-cache benchmarks should clear it or create a fresh proxy.
+- Access count counts valid `score` calls, computation count counts actual score evaluations; cache hits count as accesses only. Both guarded by mutex.
+- Proxy values are real-valued Gaussian, not clipped to [0,1]; theoretical distribution parameters may later use other families (Uniform/Beta). Scores are *not* calibrated probabilities.
+- A fixed seed hashes the normalized unordered pair to obtain a deterministic Gaussian sample. Real-world proxies will implement the same interface without needing synthetic truth labels.
+- `AlgorithmResult::queries_per_round` should represent sequential dependent batches, not threads. The experiment runner should validate its totals against oracle-query counter deltas and check output size.
+- `Query`/`QueryBatch` are types for future batch execution; this step does not add an oracle batch API.
+
+Verification: standalone C++20 smoke test compiled and ran successfully with g++ (`-Wall -Wextra -Werror -pthread`) and exercised proxy symmetry, cached counts, concurrent access, and a dummy algorithm with optional proxy. New Catch2 suite has **not** yet been run in the actual repository.
+
+Run from repo root after extracting overlay:
+
+```bash
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release -j
+./build-release/unit_tests "[proxy],[algorithm]"
+./build-release/unit_tests
+```
+
+Next: integrate and test locally, then a trivial exact representative-query baseline, a single synthetic partition, and one CSV output row; after that add `metrics.hpp` and extend synthetic distributions.
+ Scratch and persistent storage paths recorded; output transfer between Engaging and local tested.
 - `requirements.txt` loosened (if still pinned); partner runs setup and a Slurm test.
 - Bibliography mapping of references [2] and [3]; node-ordering direction.
+
+---
+
+## 8. Phase 2 continuation — Proxy and Algorithm interfaces (Nov 12, 2026)
+
+**Prepared as a non-destructive overlay package; new Catch2 tests must be run in the actual repository.** The user confirmed the preceding Partition/ExactOracle tests all passed.
+
+New files:
+
+- `include/core/proxy.hpp`: abstract `score(a,b)` interface, access/computation counts, reset. A higher score means stronger within-cluster evidence.
+- `include/core/synthetic_proxy.hpp`: lazy Gaussian side-information proxy, with configurable within/between means, shared standard deviation, seed, optional cache. Pair scores are deterministic regardless of query order or thread count; reversed pairs share a score. No n² similarity matrix. Owns private copy of truth, not exposed to
