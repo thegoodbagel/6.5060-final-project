@@ -274,3 +274,4 @@ If implementation runs long, prioritize the synthetic benchmark and shrink the r
 - Node-ordering direction must be checked against the paper.
 - Decide whether proxy scores are charged when generated or when accessed (report both access counts and total proxy compute time).
 - Algorithm pseudocode extraction is the biggest schedule risk and has no code dependency, so start now.
+
