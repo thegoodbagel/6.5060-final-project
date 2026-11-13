@@ -525,4 +525,68 @@ O(n² log n) time when its temporary buffer is available. The runner
 disables proxy memoization since the current algorithms either skip the
 proxy or access each pair once, and the scored edges already store the
 values. The CSV records preprocessing time separately while retaining
-inclusive algorithm runtime. CMake and Engaging verification are pending.
+inclusive algorithm runtime.
+
+Local macOS verification reproduced exact recovery, 535 oracle queries
+and rounds, F1 = 1, and ARI = 1. CTest reported 0.55 s elapsed and the
+smoke run reported 32.1816 ms preprocessing. These are local checks.
+Formal timing comparisons are deferred to Engaging.
+
+## 8. Milestone 5 — Node Ordering
+
+Node Ordering uses pair scores twice. The sum of incident scores sets a
+global priority, so nodes with many likely neighbors are considered early.
+Once a node is selected, the scores to earlier nodes determine which
+existing cluster to try first. With calibrated match probabilities the
+sum estimates the expected number of neighbors. This benchmark uses
+the configured proxy scores directly, so the sum is a priority signal.
+
+### 8.1 Source and implementation search
+
+The implementation follows Algorithm 5 of Vesdapunt, Bellare, and Dalvi
+(2014), as also described by Mazumdar and Saha (2017). Both priority
+orders are descending. The 2015 erratum corrects an experimental figure.
+The original paper mentions a Python implementation. A search for public
+code did not find a version that could be verified against Algorithm 5.
+
+- [Original paper](https://www.vldb.org/pvldb/vol7/p1071-vesdapunt.pdf)
+- [Erratum](https://www.vldb.org/pvldb/vol8/p641-vesdapunt-errata.pdf)
+- [Theoretical analysis](https://arxiv.org/abs/1702.01208)
+
+### 8.2 Query schedule and correctness
+
+The algorithm scores each unordered pair once and stores the scores in a
+triangular table. It sorts nodes by descending score sum. For each current
+node, it finds the highest-scoring earlier member of each known cluster
+and tries these members in descending score order. Equal priorities and
+equal pair scores use element ID to break ties. A negative answer rules
+out the entire candidate cluster by transitivity. A positive answer
+assigns the node immediately. If every candidate fails, the node starts
+a new cluster.
+
+This implements the paper's cached inference directly. In a full scan of
+earlier nodes, later members of a rejected cluster would be inferred
+negative. Keeping only the earliest member from each cluster gives the
+same actual oracle queries for the chosen tie order. Exact oracle answers
+maintain the correct partition of the processed prefix by induction.
+The paper's approximation concerns oracle query cost. Recovery remains
+exact under the perfect-oracle assumption regardless of the score quality.
+
+### 8.3 Verification and limitations
+
+At n=500, k=10, seed=42, the balanced run recovered exactly using 535
+oracle queries and 124,750 proxy computations. Each oracle query is counted
+as one sequential round. A hand-constructed test checks the exact query
+sequence and verifies that a cluster can be tested via a member other than
+its first node. Additional tests check exact recovery with identical
+within- and between-score distributions, including the one-cluster
+and all-singleton cases.
+
+The direct GCC/Catch2 build passed 28 test cases and 1,317 assertions.
+
+The score table takes O(n²) memory. Selecting best members scans the
+processed prefix, taking O(n²) total. Sorting the candidates costs at
+most O(nk log(k+1)) overall for a partition with k clusters. The initial
+scoring and global node sort are reported as preprocessing. Per-node
+candidate selection and sorting are included in total runtime. Formal
+performance comparisons are deferred to Engaging.

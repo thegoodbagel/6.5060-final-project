@@ -17,7 +17,7 @@ We study the effects of:
 
 ## Algorithms
 
-The representative baseline, Black et al.’s limited-round algorithm, and Edge Ordering are implemented. Node Ordering and Side-Information-Assisted Learning are planned.
+The representative baseline, Black et al.’s limited-round algorithm, Edge Ordering, and Node Ordering are implemented. Side-Information-Assisted Learning is planned.
 
 1. Limited Adaptive Rounds: The deterministic algorithm of Black et al. \[1\], with configurable adaptivity.
 2. Edge Ordering: Processes pairs in descending proxy similarity and uses transitive inference to skip deducible queries \[3\].
@@ -185,7 +185,7 @@ We record oracle queries, proxy queries, adaptive rounds, runtime, and clusterin
 | Document | What it covers |
 |---|---|
 | [digest.md](digest.md) | Start here for implemented features, build and run commands, verified results, and next steps. |
-| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6 and 7 cover Black’s limited-round algorithm and Edge Ordering, including their implementation and tests. |
+| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6–8 cover Black’s limited-round algorithm, Edge Ordering, and Node Ordering, including their implementations and tests. |
 | [tasks.md](tasks.md) | Project plan, phase checklists, and division of work. |
 
 ## Reproducibility

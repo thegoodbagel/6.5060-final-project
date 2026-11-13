@@ -130,7 +130,7 @@ Legend: `[x]` done · `[ ]` not done · **Status** is per phase. Last updated: N
 
 ## Phase 4: Four Algorithms (critical path)
 
-**Status: in progress.** Black limited-round and Edge Ordering are implemented. First extract exact pseudocode, assumptions, and stopping conditions from each paper. Do not implement from asymptotic bounds alone.
+**Status: in progress.** Black limited-round, Edge Ordering, and Node Ordering are implemented. First extract exact pseudocode, assumptions, and stopping conditions from each paper. Do not implement from asymptotic bounds alone.
 
 ### 4.0 Literature prerequisites
 - [ ] Verify bibliography mapping of references [2] and [3] (the side-information paper vs the edge/node ordering paper)
@@ -150,11 +150,11 @@ Legend: `[x]` done · `[ ]` not done · **Status** is per phase. Last updated: N
 - [x] No duplicate queries; small-case correctness
 - [x] Measure preprocessing cost (sorting O(n²) edges)
 
-### 4.3 Algorithm 3: node ordering (approximate)
-- [ ] Exact procedure from the paper
-- [ ] Node scores and prescribed ordering
-- [ ] Oracle execution, updates, stopping condition
-- [ ] Approximation quality (F1, ARI); imbalanced partitions
+### 4.3 Algorithm 3: node ordering (query-cost approximation)
+- [x] Exact procedure from Algorithm 5 of Vesdapunt, Bellare, and Dalvi
+- [x] Descending node and pair score ordering
+- [x] Oracle execution, updates, and stopping condition
+- [x] Exact recovery with a perfect oracle on imbalanced and edge-case partitions
 
 ### 4.4 Algorithm 4: side-information-assisted (Mazumdar and Saha 2017)
 - [ ] Exact pseudocode

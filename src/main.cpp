@@ -1,5 +1,6 @@
 #include "algorithms/black_limited_round.hpp"
 #include "algorithms/edge_ordering.hpp"
+#include "algorithms/node_ordering.hpp"
 #include "benchmarks/milestone_runner.hpp"
 #include "benchmarks/proxy_quality.hpp"
 
@@ -56,7 +57,7 @@ int main(int argc, char** argv) {
             if (arg == "--help") {
                 std::cout << "Usage: partition_experiment [--n N] [--k K] [--seed S]"
                              " [--output FILE]\n"
-                             "  [--algorithm representative_baseline|black_limited_round|edge_ordering]\n"
+                             "  [--algorithm representative_baseline|black_limited_round|edge_ordering|node_ordering]\n"
                              "  [--rounds R] [--k-bound K] (Black only)\n"
                              "  [--shape balanced|uniform|zipf|power-law|one-large|singleton-heavy]\n"
                              "  [--exponent X] [--proxy-seed S] [--quality-samples N]\n"
@@ -94,6 +95,7 @@ int main(int argc, char** argv) {
             if (rounds || cluster_bound)
                 throw std::invalid_argument("--rounds and --k-bound require black_limited_round");
             if (algorithm == "edge_ordering") return pl::run_experiment(cfg, pl::EdgeOrdering{});
+            if (algorithm == "node_ordering") return pl::run_experiment(cfg, pl::NodeOrdering{});
             if (algorithm == "representative_baseline") return pl::run_baseline_experiment(cfg);
             throw std::invalid_argument("Unknown algorithm: " + algorithm);
         }();

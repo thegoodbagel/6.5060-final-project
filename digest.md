@@ -18,6 +18,8 @@ same-cluster oracle queries and optional noisy similarity scores.
   algorithm of Black, Mazumdar, and Saha (Algorithm 1).
 - Edge Ordering with descending proxy scores and positive and negative
   transitive inference.
+- Node Ordering with descending node priorities and one query per candidate
+  cluster until the first match.
 
 ## Run
 
@@ -54,12 +56,22 @@ The balanced smoke run recovered exactly with 535 oracle queries and
 sorting. Total runtime includes preprocessing. Edge Ordering stores every
 unordered pair, so its memory use grows quadratically.
 
+## Node Ordering
+
+```bash
+./build-release/partition_experiment --algorithm node_ordering \
+  --n 500 --k 10 --seed 42 --output results/raw/node-ordering.csv
+```
+
+The smoke run recovered exactly with 535 oracle calls and 124,750 proxy
+computations. The triangular score table uses quadratic memory. Use
+macOS for correctness checks and Engaging for performance comparisons.
+
 ## Next
 
 - Verify the updated CMake build and Slurm run on MIT Engaging.
 - Sweep n, k, and round budgets on fixed seeds and report total and unique
   query counts alongside actual rounds.
-- Implement Node Ordering after checking its original procedure and
-  establishing what the approximation guarantee measures.
+- Verify and implement the side-information-assisted algorithm from its paper.
 
 See `archive.md` for implementation history and `tasks.md` for the project plan.
