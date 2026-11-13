@@ -1,12 +1,14 @@
 #pragma once
 
 #include "core/proxy.hpp"
+#include "core/score_distribution.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -14,7 +16,7 @@
 namespace pl {
 
 // Lazy, deterministic symmetric proxy: no global RNG or dense n*n matrix.
-// For each unordered pair, sample a normal score with a class-conditional mean.
+// Each unordered pair receives a score from its class-conditional distribution.
 // The truth stays private, accessible only to this synthetic data generator.
 class SyntheticProxy final : public Proxy {
 public:
@@ -24,6 +26,8 @@ public:
         double standard_deviation = 0.1;
         std::uint64_t seed = 0;
         bool cache = false;
+        std::optional<ScoreDistribution> within = std::nullopt;
+        std::optional<ScoreDistribution> between = std::nullopt;
     };
 
     explicit SyntheticProxy(Partition truth)
@@ -31,6 +35,8 @@ public:
 
     SyntheticProxy(Partition truth, Parameters params)
         : truth_(std::move(truth)), params_(params) {
+        if (params_.within) params_.within->validate();
+        if (params_.between) params_.between->validate();
         if (!std::isfinite(params_.within_mean) ||
             !std::isfinite(params_.between_mean) ||
             !std::isfinite(params_.standard_deviation) ||
@@ -104,6 +110,11 @@ private:
     [[nodiscard]] double calculate(Pair pair, bool same) const {
         const auto h1 = mix(params_.seed ^ mix(static_cast<std::uint64_t>(pair.first)));
         const auto h2 = mix(h1 ^ mix(static_cast<std::uint64_t>(pair.second)));
+        const auto& distribution = same ? params_.within : params_.between;
+        if (distribution) {
+            std::mt19937_64 rng(h2);
+            return distribution->sample(rng);
+        }
         const double u1 = unit_open(mix(h2));
         const double u2 = unit_open(mix(h2 ^ 0x72616e646f6dULL));
         constexpr double two_pi = 6.283185307179586476925286766559;

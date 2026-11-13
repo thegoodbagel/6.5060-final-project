@@ -4,6 +4,7 @@
 #include "core/exact_oracle.hpp"
 #include "core/metrics.hpp"
 #include "core/synthetic_proxy.hpp"
+#include "benchmarks/synthetic_partition.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -13,7 +14,7 @@
 #include <fstream>
 #include <iomanip>
 #include <numeric>
-#include <random>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -24,16 +25,15 @@ struct BaselineExperiment {
     std::size_t n = 12;
     std::size_t k = 3;
     std::uint64_t seed = 42;
+    std::string shape = "balanced";
+    double exponent = 2.0;
+    std::optional<ScoreDistribution> within = std::nullopt;
+    std::optional<ScoreDistribution> between = std::nullopt;
+    std::optional<std::uint64_t> proxy_seed = std::nullopt;
 };
 
 inline Partition make_balanced_partition(const BaselineExperiment& cfg) {
-    if (cfg.n == 0 || cfg.k == 0 || cfg.k > cfg.n)
-        throw std::invalid_argument("Require 1 <= k <= n");
-    std::vector<ClusterId> labels(cfg.n);
-    for (std::size_t i = 0; i < cfg.n; ++i) labels[i] = i % cfg.k;
-    std::mt19937_64 rng(cfg.seed);
-    std::shuffle(labels.begin(), labels.end(), rng);
-    return Partition(std::move(labels));
+    return make_synthetic_partition(cfg.n, cfg.k, cfg.seed, "balanced");
 }
 
 struct BaselineExperimentResult {
@@ -48,9 +48,10 @@ struct BaselineExperimentResult {
 };
 
 inline BaselineExperimentResult run_baseline_experiment(const BaselineExperiment& cfg) {
-    const Partition truth = make_balanced_partition(cfg);
+    const Partition truth = make_synthetic_partition(cfg.n, cfg.k, cfg.seed, cfg.shape, cfg.exponent);
     ExactOracle oracle(truth);
-    SyntheticProxy proxy(truth, {.seed = cfg.seed, .cache = true});
+    SyntheticProxy proxy(truth, {.seed = cfg.proxy_seed.value_or(cfg.seed), .cache = true,
+                                 .within = cfg.within, .between = cfg.between});
     RepresentativeBaseline algorithm;
     const auto started = std::chrono::steady_clock::now();
     const auto answer = algorithm.run(cfg.n, oracle, &proxy);
@@ -75,7 +76,7 @@ inline void write_baseline_csv(const std::filesystem::path& path,
     out << "algorithm,dataset,n,k,seed,oracle_queries,unique_oracle_queries,"
            "proxy_accesses,proxy_computations,adaptive_rounds,runtime_ms,"
            "exact_recovery,pairwise_precision,pairwise_recall,pairwise_f1,adjusted_rand_index\n";
-    out << "representative_baseline,balanced_synthetic," << r.config.n << ','
+    out << "representative_baseline," << r.config.shape << "_synthetic," << r.config.n << ','
         << r.config.k << ',' << r.config.seed << ',' << r.oracle_queries << ','
         << r.unique_oracle_queries << ',' << r.proxy_accesses << ','
         << r.proxy_computations << ',' << r.adaptive_rounds << ','
