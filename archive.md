@@ -463,3 +463,66 @@ The CLI rejected a cluster bound smaller than the configured k.
 - CMake and MIT Engaging verification remain pending for this milestone.
   The recorded tests used a direct GCC build and the same temporary
   Catch2 amalgamation workflow as Milestone 2.
+
+## 7. Milestone 4 — Edge Ordering
+
+Edge Ordering spends proxy computation up front to reduce exact oracle
+queries. The proxy prioritizes pairs likely to match, so useful positive
+merges can happen early. Each merge can make many subsequent comparisons
+redundant. With an exact oracle, even an inverted similarity ranking
+affects query count and leaves correctness intact.
+
+### 7.1 Paper and implementation search
+
+Mazumdar and Saha (2017), Section 2.2, specify descending similarity and a
+scan until every edge has been queried or inferred. Wang et al. (2013),
+Section 4.1, give the sequential labeling procedure for a supplied pair
+order, including inference of both matches and nonmatches. This version
+uses the descending score order specified in the theoretical analysis.
+The original paper also studies a separate ordering heuristic and parallel
+labeling. Searches for the papers and author projects did not identify a
+public implementation that could be verified against this procedure.
+
+- [Mazumdar and Saha (2017)](https://arxiv.org/abs/1702.01208)
+- [Wang et al. (2013)](https://arxiv.org/abs/1408.6916)
+
+### 7.2 Query schedule and inference
+
+The algorithm generates every unordered pair, requests one proxy score for
+each, and sorts scores in descending order. Equal scores preserve
+lexicographic pair order. It scans the sorted list using union-find for
+known matches and symmetric sets of incompatible component roots for known
+nonmatches. A pair can be inferred if its endpoints have the same root or
+their roots are known to be incompatible. Otherwise, the oracle supplies
+the answer. A positive answer merges the two components and transfers
+their negative constraints to the merged root. A negative answer records
+the incompatibility in both directions.
+
+Each component only contains confirmed matches. An incompatibility
+between two components witnesses that their true clusters differ, so it
+continues to hold after either component merges with another confirmed
+match. By the end of the scan, the algorithm has enough information to
+label every pair. It requires an exact oracle and a proxy with finite
+scores. It takes no cluster count or score distribution parameters.
+
+### 7.3 Verification and cost
+
+At n=500, k=10, seed=42 on the balanced benchmark, Edge Ordering recovered
+exactly with 535 oracle queries, all unique, and 124,750 proxy accesses
+and computations. The corresponding representative baseline used 2,740
+oracle queries. Edge Ordering used 535 sequential rounds. The smoke run
+spent about 18 ms of its 19 ms algorithm runtime scoring and sorting.
+These timings are single observations.
+
+The direct GCC/Catch2 build passed 26 test cases and 1,135 assertions.
+The tests check reversed score ranking, positive and negative inference,
+transfer of a negative constraint after a merge, and exact recovery
+across 120 shape, seed, and cluster-count combinations. The latter include
+all-singleton and one-cluster partitions.
+
+The candidate list consumes O(n²) memory. Comparison sorting uses
+O(n² log n) time when its temporary buffer is available. The runner
+disables proxy memoization since the current algorithms either skip the
+proxy or access each pair once, and the scored edges already store the
+values. The CSV records preprocessing time separately while retaining
+inclusive algorithm runtime. CMake and Engaging verification are pending.

@@ -49,13 +49,14 @@ struct BaselineExperimentResult {
     std::vector<std::size_t> queries_per_round;
     std::size_t requested_rounds = 0;
     std::size_t cluster_bound = 0;
+    std::optional<double> preprocessing_ms = std::nullopt;
 };
 
 inline BaselineExperimentResult run_experiment(const BaselineExperiment& cfg,
                                                const Algorithm& algorithm) {
     const Partition truth = make_synthetic_partition(cfg.n, cfg.k, cfg.seed, cfg.shape, cfg.exponent);
     ExactOracle oracle(truth);
-    SyntheticProxy proxy(truth, {.seed = cfg.proxy_seed.value_or(cfg.seed), .cache = true,
+    SyntheticProxy proxy(truth, {.seed = cfg.proxy_seed.value_or(cfg.seed), .cache = false,
                                  .within = cfg.within, .between = cfg.between});
     const auto started = std::chrono::steady_clock::now();
     const auto answer = algorithm.run(cfg.n, oracle, &proxy);
@@ -70,7 +71,8 @@ inline BaselineExperimentResult run_experiment(const BaselineExperiment& cfg,
             oracle.unique_query_count(), proxy.access_count(), proxy.computation_count(),
             answer.adaptive_rounds(),
             std::chrono::duration<double, std::milli>(finished - started).count(),
-            std::string(algorithm.name()), answer.queries_per_round};
+            std::string(algorithm.name()), answer.queries_per_round, 0, 0,
+            answer.preprocessing_ms};
 }
 
 inline BaselineExperimentResult run_baseline_experiment(const BaselineExperiment& cfg) {
@@ -85,6 +87,7 @@ inline void write_baseline_csv(const std::filesystem::path& path,
     out << "algorithm,dataset,n,k,seed,oracle_queries,unique_oracle_queries,"
            "proxy_accesses,proxy_computations,adaptive_rounds,runtime_ms,"
            "exact_recovery,pairwise_precision,pairwise_recall,pairwise_f1,adjusted_rand_index";
+    if (r.preprocessing_ms) out << ",preprocessing_ms";
     if (r.requested_rounds != 0) out << ",requested_rounds,cluster_bound,queries_per_round";
     out << '\n';
     out << r.algorithm << ',' << r.config.shape << "_synthetic," << r.config.n << ','
@@ -95,6 +98,7 @@ inline void write_baseline_csv(const std::filesystem::path& path,
         << (r.metrics.exact_recovery ? 1 : 0) << ','
         << r.metrics.pairwise_precision << ',' << r.metrics.pairwise_recall << ','
         << r.metrics.pairwise_f1 << ',' << r.metrics.adjusted_rand_index;
+    if (r.preprocessing_ms) out << ',' << *r.preprocessing_ms;
     if (r.requested_rounds != 0) {
         out << ',' << r.requested_rounds << ',' << r.cluster_bound << ',';
         const char* separator = "";

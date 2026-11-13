@@ -1,4 +1,5 @@
 #include "algorithms/black_limited_round.hpp"
+#include "algorithms/edge_ordering.hpp"
 #include "benchmarks/milestone_runner.hpp"
 #include "benchmarks/proxy_quality.hpp"
 
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
             if (arg == "--help") {
                 std::cout << "Usage: partition_experiment [--n N] [--k K] [--seed S]"
                              " [--output FILE]\n"
-                             "  [--algorithm representative_baseline|black_limited_round]\n"
+                             "  [--algorithm representative_baseline|black_limited_round|edge_ordering]\n"
                              "  [--rounds R] [--k-bound K] (Black only)\n"
                              "  [--shape balanced|uniform|zipf|power-law|one-large|singleton-heavy]\n"
                              "  [--exponent X] [--proxy-seed S] [--quality-samples N]\n"
@@ -90,11 +91,11 @@ int main(int argc, char** argv) {
                 run.cluster_bound = bound;
                 return run;
             }
-            if (algorithm != "representative_baseline")
-                throw std::invalid_argument("Unknown algorithm: " + algorithm);
             if (rounds || cluster_bound)
                 throw std::invalid_argument("--rounds and --k-bound require black_limited_round");
-            return pl::run_baseline_experiment(cfg);
+            if (algorithm == "edge_ordering") return pl::run_experiment(cfg, pl::EdgeOrdering{});
+            if (algorithm == "representative_baseline") return pl::run_baseline_experiment(cfg);
+            throw std::invalid_argument("Unknown algorithm: " + algorithm);
         }();
         pl::write_baseline_csv(output, result);
         std::cout << "Algorithm: " << result.algorithm << '\n'
@@ -105,6 +106,8 @@ int main(int argc, char** argv) {
                   << "Pairwise F1: " << result.metrics.pairwise_f1 << '\n'
                   << "ARI: " << result.metrics.adjusted_rand_index << '\n'
                   << "CSV: " << output << '\n';
+        if (result.preprocessing_ms)
+            std::cout << "Preprocessing (ms): " << *result.preprocessing_ms << '\n';
         if (result.requested_rounds != 0) {
             std::cout << "Queries per round:";
             for (const auto count : result.queries_per_round) std::cout << ' ' << count;

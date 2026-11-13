@@ -16,6 +16,8 @@ same-cluster oracle queries and optional noisy similarity scores.
   AUC, and score moments.
 - Representative baseline and the deterministic pairwise limited-round
   algorithm of Black, Mazumdar, and Saha (Algorithm 1).
+- Edge Ordering with descending proxy scores and positive and negative
+  transitive inference.
 
 ## Run
 
@@ -40,12 +42,24 @@ recovered exactly. Black used 17,605 queries in two batches (12,655 and 4,950).
 The baseline used 2,740 queries and 2,740 rounds. The Black run terminated
 early because the representative set met the paper's all-pairs base case.
 
+## Edge Ordering
+
+```bash
+./build-release/partition_experiment --algorithm edge_ordering \
+  --n 500 --k 10 --seed 42 --output results/raw/edge-ordering.csv
+```
+
+The balanced smoke run recovered exactly with 535 oracle queries and
+124,750 proxy accesses. The CSV includes preprocessing time for scoring and
+sorting. Total runtime includes preprocessing. Edge Ordering stores every
+unordered pair, so its memory use grows quadratically.
+
 ## Next
 
 - Verify the updated CMake build and Slurm run on MIT Engaging.
 - Sweep n, k, and round budgets on fixed seeds and report total and unique
   query counts alongside actual rounds.
-- Verify the sources and ordering rules for the remaining research algorithms
-  before implementing them.
+- Implement Node Ordering after checking its original procedure and
+  establishing what the approximation guarantee measures.
 
 See `archive.md` for implementation history and `tasks.md` for the project plan.

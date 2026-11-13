@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -22,6 +23,7 @@ using QueryBatch = std::vector<Query>;
 struct AlgorithmResult {
     Partition partition;
     std::vector<std::size_t> queries_per_round;
+    std::optional<double> preprocessing_ms = std::nullopt;
 
     explicit AlgorithmResult(Partition p,
                              std::vector<std::size_t> rounds = {})

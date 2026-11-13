@@ -17,14 +17,14 @@ We study the effects of:
 
 ## Algorithms
 
-The representative baseline and Black et al.’s limited-round algorithm are implemented. The remaining three research algorithms below are planned:
+The representative baseline, Black et al.’s limited-round algorithm, and Edge Ordering are implemented. Node Ordering and Side-Information-Assisted Learning are planned.
 
 1. Limited Adaptive Rounds: The deterministic algorithm of Black et al. \[1\], with configurable adaptivity.
-2. Edge Ordering: Orders element pairs by increasing proxy similarity and performs oracle queries accordingly \[3\].
-3. Node Ordering: Orders elements by increasing aggregate similarity scores \[3\].
+2. Edge Ordering: Processes pairs in descending proxy similarity and uses transitive inference to skip deducible queries \[3\].
+3. Node Ordering: Orders elements by descending aggregate similarity scores \[3\].
 4. Side-Information-Assisted Learning: Uses proxy similarities to improve query efficiency, following \[2\].
 
-The Node Ordering algorithm is approximate, while the other algorithms target exact partition recovery under their respective assumptions.
+The Node Ordering approximation discussed in [3] concerns query cost.
 
 ## Repository Structure
 
@@ -185,7 +185,7 @@ We record oracle queries, proxy queries, adaptive rounds, runtime, and clusterin
 | Document | What it covers |
 |---|---|
 | [digest.md](digest.md) | Start here for implemented features, build and run commands, verified results, and next steps. |
-| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Section 6 explains Black’s round/query tradeoff, implementation, tests, and known limitations. |
+| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6 and 7 cover Black’s limited-round algorithm and Edge Ordering, including their implementation and tests. |
 | [tasks.md](tasks.md) | Project plan, phase checklists, and division of work. |
 
 ## Reproducibility
@@ -200,7 +200,7 @@ Large-scale experiments are intended to run on the [MIT Engaging cluster](https:
 
 \[2\] Mazumdar et al. (2017). Query Complexity of Clustering with Side Information.
 
-\[3\] Mazumdar et al. (2017). Theoretical analysis of Edge Ordering and Node Ordering algorithms.
+\[3\] Mazumdar and Saha (2017). [A Theoretical Analysis of First Heuristics of Crowdsourced Entity Resolution](https://arxiv.org/abs/1702.01208).
 
 \[4\] Mazumdar et al. (2017). Clustering with Noisy Oracle Queries.
 
