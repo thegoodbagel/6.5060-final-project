@@ -590,3 +590,80 @@ most O(nk log(k+1)) overall for a partition with k clusters. The initial
 scoring and global node sort are reported as preprocessing. Per-node
 candidate selection and sorting are included in total runtime. Formal
 performance comparisons are deferred to Engaging.
+
+Local macOS verification of Node Ordering passed CTest in 0.63 s and
+reproduced 535 queries and rounds, exact recovery, F1 = 1, and ARI = 1
+at n=500, k=10, seed=42. The preprocessing reading was 9.79871 ms.
+Formal timing comparisons remain deferred to Engaging.
+
+## 9. Milestone 6 — Side-Information-Assisted Learning
+
+Edge and Node Ordering use scores to choose which oracle question to
+ask next. The Monte Carlo algorithm can assign a point without asking
+about it at all. The tradeoff is that a statistical assignment can be
+wrong even when every oracle answer is correct.
+
+### 9.1 Source and benchmark adaptation
+
+The implementation follows the initialization, iterative-update, and
+grown-cluster phases in Section 3.1 of Mazumdar and Saha (2017).
+The paper analyzes unknown within-cluster and between-cluster score
+distributions on a finite alphabet. The implementation maps continuous
+scores to 16 fixed bins after an arctangent transform. This gives bounded
+histogram storage for arbitrary finite scores. Binning can collapse
+differences between distributions, and score separation after binning
+can differ from the continuous Hellinger estimate in the benchmark.
+The finite-run growth constant is fixed at 4 and was chosen for the
+smoke-test implementation. This setting has not been validated as a
+constant that satisfies the proof. A public reference implementation
+could not be verified in the literature and code search.
+
+[Query Complexity of Clustering with Side Information](https://arxiv.org/abs/1706.07719)
+
+### 9.2 Growth and assignment
+
+1. Shuffle the element IDs with the experiment seed. Process unknown
+   points in that order, querying one representative per active cluster
+   until there is a positive match or the point starts a new cluster.
+2. After each oracle assignment, update pooled within-cluster and
+   between-cluster histograms using scores to existing confirmed points.
+   The growth threshold is 4 log(n) divided by the empirical squared
+   Hellinger divergence. Missing histograms or zero separation postpone
+   statistical growth and leave oracle processing available.
+3. When an active cluster reaches the threshold, compare the score
+   histogram from each unassigned point to the cluster with the cluster's
+   internal score histogram. Keep the confirmed seed fixed during the
+   scan. Apply the paper's two thresholds to admit close points, queue
+   ambiguous points for oracle checks, and leave distant points unassigned.
+4. Check queued points against active representatives, starting with the
+   grown cluster. Retire that cluster afterward and remove its confirmed
+   scores from the active pooled histograms. Resume growing the remaining
+   clusters until all points are assigned.
+
+The algorithm receives the proxy, oracle, element count, and seed.
+It receives no ground-truth group count or distribution parameters.
+Per-cluster histograms are kept in fixed-size arrays. Retiring a cluster
+can recompute cross-pair proxy scores to remove its contribution from
+other clusters' histograms. Every actual oracle query is counted as one
+sequential round.
+
+### 9.3 Verification and limits
+The direct GCC/Catch2 build passed 30 test cases and 1,330 assertions.
+
+| Balanced dataset, seed 42 | Oracle queries | Exact recovery |
+|---|---:|---|
+| Representative baseline, n=500, k=3 | 997 | Yes |
+| Side Information, n=500, k=3, disjoint uniform proxies | 870 | Yes |
+| Side Information, n=500, k=10, same proxies | 2,753 | Yes |
+
+The proxy intervals were [0.8, 0.81] within clusters and [0.1, 0.11]
+between clusters. The k=3 run made 83,253 proxy accesses, including
+recomputations. The k=10 run illustrates that even separated proxies
+may yield little benefit when grown clusters are smaller or reached
+late. Tests also cover constant, indistinguishable proxy scores and
+the one-cluster and all-singleton boundaries.
+
+The paper's asymptotic bound applies under its distribution and
+concentration assumptions. The smoke tests establish behavior on the
+tested inputs and give no empirical recovery guarantee across scores,
+seeds, or problem sizes. Formal comparisons are deferred to Engaging.

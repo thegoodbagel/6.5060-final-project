@@ -17,7 +17,7 @@ We study the effects of:
 
 ## Algorithms
 
-The representative baseline, Black et al.’s limited-round algorithm, Edge Ordering, and Node Ordering are implemented. Side-Information-Assisted Learning is planned.
+The representative baseline, Black et al.’s limited-round algorithm, Edge Ordering, and Node Ordering are implemented. The Monte Carlo Side-Information-Assisted Learning algorithm is also implemented.
 
 1. Limited Adaptive Rounds: The deterministic algorithm of Black et al. \[1\], with configurable adaptivity.
 2. Edge Ordering: Processes pairs in descending proxy similarity and uses transitive inference to skip deducible queries \[3\].
@@ -185,7 +185,7 @@ We record oracle queries, proxy queries, adaptive rounds, runtime, and clusterin
 | Document | What it covers |
 |---|---|
 | [digest.md](digest.md) | Start here for implemented features, build and run commands, verified results, and next steps. |
-| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6–8 cover Black’s limited-round algorithm, Edge Ordering, and Node Ordering, including their implementations and tests. |
+| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6–9 cover Black’s limited-round algorithm, Edge Ordering, Node Ordering, and Side-Information-Assisted Learning, including their implementations and tests. |
 | [tasks.md](tasks.md) | Project plan, phase checklists, and division of work. |
 
 ## Reproducibility
@@ -198,7 +198,7 @@ Large-scale experiments are intended to run on the [MIT Engaging cluster](https:
 
 \[1\] Black, Mazumdar, and Saha (2025). [Learning Partitions with Optimal Query and Round Complexities](https://arxiv.org/abs/2505.05009).
 
-\[2\] Mazumdar et al. (2017). Query Complexity of Clustering with Side Information.
+\[2\] Mazumdar and Saha (2017). [Query Complexity of Clustering with Side Information](https://arxiv.org/abs/1706.07719).
 
 \[3\] Mazumdar and Saha (2017). [A Theoretical Analysis of First Heuristics of Crowdsourced Entity Resolution](https://arxiv.org/abs/1702.01208).
 

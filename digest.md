@@ -67,11 +67,25 @@ The smoke run recovered exactly with 535 oracle calls and 124,750 proxy
 computations. The triangular score table uses quadratic memory. Use
 macOS for correctness checks and Engaging for performance comparisons.
 
+## Side-Information-Assisted Learning
+
+```bash
+./build-release/partition_experiment --algorithm side_information \
+  --n 500 --k 3 --seed 42 --within uniform,0.8,0.81 --between uniform,0.1,0.11 \
+  --output results/raw/side-information.csv
+```
+
+This implements the Monte Carlo growth procedure with fixed score bins.
+It uses Hellinger distance to decide when to grow clusters from proxy
+scores and when to query the oracle. The smoke run recovered exactly
+with 870 oracle calls versus 997 for the baseline. Statistical
+assignments can produce recovery errors on other inputs.
+
 ## Next
 
 - Verify the updated CMake build and Slurm run on MIT Engaging.
 - Sweep n, k, and round budgets on fixed seeds and report total and unique
   query counts alongside actual rounds.
-- Verify and implement the side-information-assisted algorithm from its paper.
+- Run same-seed comparisons across all four research algorithms and the baseline.
 
 See `archive.md` for implementation history and `tasks.md` for the project plan.

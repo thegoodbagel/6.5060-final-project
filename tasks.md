@@ -157,11 +157,11 @@ Legend: `[x]` done · `[ ]` not done · **Status** is per phase. Last updated: N
 - [x] Exact recovery with a perfect oracle on imbalanced and edge-case partitions
 
 ### 4.4 Algorithm 4: side-information-assisted (Mazumdar and Saha 2017)
-- [ ] Exact pseudocode
-- [ ] Initial partitioning and initial queries
-- [ ] Proxy-based query selection and refinement; stopping conditions
-- [ ] Preserve the parameter-free property (algorithm must not be given k, f₊, f₋)
-- [ ] Exact recovery; query counts vs O(k² log n / H²(f₊, f₋))
+- [x] Monte Carlo procedure and finite-alphabet assumptions
+- [x] Oracle initialization, empirical separation, and cluster growth
+- [x] Algorithm receives no k, f₊, or f₋
+- [x] Recovery smoke tests and zero-separation fallback
+- [ ] Compare recovery rate and query cost across seeds and proxy quality
 
 ### 4.5 Cross-algorithm correctness
 - [ ] All four on identical small partitions; brute-force reference for tiny n
