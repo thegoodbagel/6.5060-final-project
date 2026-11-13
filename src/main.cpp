@@ -1,3 +1,4 @@
+#include "algorithms/black_limited_round.hpp"
 #include "benchmarks/milestone_runner.hpp"
 #include "benchmarks/proxy_quality.hpp"
 
@@ -44,6 +45,9 @@ pl::ScoreDistribution parse_distribution(const std::string& value) {
 int main(int argc, char** argv) {
     try {
         pl::BaselineExperiment cfg;
+        std::string algorithm = "representative_baseline";
+        std::optional<std::size_t> rounds;
+        std::optional<std::size_t> cluster_bound;
         std::size_t quality_samples = 0;
         std::string output = "results/raw/milestone1.csv";
         for (int i = 1; i < argc; ++i) {
@@ -51,6 +55,8 @@ int main(int argc, char** argv) {
             if (arg == "--help") {
                 std::cout << "Usage: partition_experiment [--n N] [--k K] [--seed S]"
                              " [--output FILE]\n"
+                             "  [--algorithm representative_baseline|black_limited_round]\n"
+                             "  [--rounds R] [--k-bound K] (Black only)\n"
                              "  [--shape balanced|uniform|zipf|power-law|one-large|singleton-heavy]\n"
                              "  [--exponent X] [--proxy-seed S] [--quality-samples N]\n"
                              "  [--within FAMILY,A,B] [--between FAMILY,A,B]\n"
@@ -62,6 +68,9 @@ int main(int argc, char** argv) {
             if (arg == "--n") cfg.n = parse_nonnegative(value);
             else if (arg == "--k") cfg.k = parse_nonnegative(value);
             else if (arg == "--seed") cfg.seed = parse_nonnegative(value);
+            else if (arg == "--algorithm") algorithm = value;
+            else if (arg == "--rounds") rounds = parse_nonnegative(value);
+            else if (arg == "--k-bound") cluster_bound = parse_nonnegative(value);
             else if (arg == "--shape") cfg.shape = value;
             else if (arg == "--exponent") cfg.exponent = parse_real(value);
             else if (arg == "--proxy-seed") cfg.proxy_seed = parse_nonnegative(value);
@@ -71,9 +80,24 @@ int main(int argc, char** argv) {
             else if (arg == "--output") output = value;
             else throw std::invalid_argument("Unknown option: " + arg);
         }
-        const auto result = pl::run_baseline_experiment(cfg);
+        const auto result = [&] {
+            if (algorithm == "black_limited_round") {
+                const auto bound = cluster_bound.value_or(cfg.k);
+                const auto budget = rounds.value_or(2);
+                if (bound < cfg.k) throw std::invalid_argument("Require k-bound >= k");
+                auto run = pl::run_experiment(cfg, pl::BlackLimitedRound(bound, budget));
+                run.requested_rounds = budget;
+                run.cluster_bound = bound;
+                return run;
+            }
+            if (algorithm != "representative_baseline")
+                throw std::invalid_argument("Unknown algorithm: " + algorithm);
+            if (rounds || cluster_bound)
+                throw std::invalid_argument("--rounds and --k-bound require black_limited_round");
+            return pl::run_baseline_experiment(cfg);
+        }();
         pl::write_baseline_csv(output, result);
-        std::cout << "Algorithm: representative_baseline\n"
+        std::cout << "Algorithm: " << result.algorithm << '\n'
                   << "n=" << cfg.n << " k=" << cfg.k << " seed=" << cfg.seed << '\n'
                   << "Exact recovery: " << (result.metrics.exact_recovery ? "yes" : "no") << '\n'
                   << "Oracle queries: " << result.oracle_queries << '\n'
@@ -81,6 +105,11 @@ int main(int argc, char** argv) {
                   << "Pairwise F1: " << result.metrics.pairwise_f1 << '\n'
                   << "ARI: " << result.metrics.adjusted_rand_index << '\n'
                   << "CSV: " << output << '\n';
+        if (result.requested_rounds != 0) {
+            std::cout << "Queries per round:";
+            for (const auto count : result.queries_per_round) std::cout << ' ' << count;
+            std::cout << '\n';
+        }
         if (quality_samples) {
             using Family = pl::ScoreDistribution::Family;
             pl::report_proxy_quality(

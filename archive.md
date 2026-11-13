@@ -125,65 +125,9 @@ Older partitions (`sched_*`, `newnodes`) run CentOS 7 and a different software s
 
 ---
 
-## 4. Issues encountered
+## 4. Phase 2 — Core Framework and First End-to-End Experiment (Nov 12, 2026)
 
-| # | Symptom | Cause | Resolution |
-|---|---------|-------|------------|
-| 1 | Apple Clang cannot build with `-fopenmp` | macOS toolchain ships no OpenMP | OpenMP made optional in CMake; `brew install libomp` plus `-DOpenMP_ROOT=$(brew --prefix libomp)` when threading is wanted |
-| 2 | Every Engaging login landed in an `Apptainer>` prompt; `module: command not found`; messages about fakeroot and `chdir /home/abrianna`; `scp` of dotfiles hung | `~/.bashrc` lines 9–10 (`module load apptainer/1.4.2` and `singularity shell --writable --fakeroot 6106-image`) auto-launched a container at login. Inside it `/root` is the real home, the host module system is unavailable, and `scp` hangs because the remote shell starts an interactive program | Commented out lines 9–10 (backup `~/.bashrc.bak`). Escape hatch if this recurs: `ssh -t host "bash --noprofile --norc"` skips startup files; the OnDemand file editor can also edit dotfiles. The container can still be started by hand when needed |
-| 3 | Setup script failed: `.../spack/.../g++ not found` | `$CXX` was inherited from the loaded gcc module but the path did not exist inside the container | Script now falls back to `g++`, `c++`, or `clang++` on PATH when `$CXX` is missing. Resolved at the root by fixing issue 2 |
-| 4 | `pip install` failed: `Could not find a version that satisfies contourpy==1.4.0 (from versions: none)` | System `python3` on Rocky 8 is 3.6, too old for current wheels; `requirements.txt` was a full `pip freeze` from macOS with pinned transitive dependencies | `module load miniforge`, `rm -rf .venv`, re-run setup. Script now requires Python >= 3.10. Recommended: keep `requirements.txt` as unpinned top-level packages |
-| 5 | Executable reported 448 OpenMP threads | On a login node nothing caps `OMP_NUM_THREADS`, so OpenMP sees every core | Expected. Never run experiments on login nodes. Inside Slurm, `submit_slurm.sh` sets `OMP_NUM_THREADS` to the allocated cores |
-| 6 | Job showed `PENDING` with reason `None` and start time `N/A`, then vanished; `scontrol show job` said "Invalid job id" | The scheduler had not yet evaluated the job; the 1-second job finished between checks, and `scontrol` only knows pending/running jobs | Use `sacct -j <jobid>` for finished jobs |
-| 7 | (Preventive) Job output lost if `logs/` is missing | Slurm does not create the output directory | `mkdir -p logs` before `sbatch` |
-
----
-
-## 5. Verified so far
-
-- Local (macOS): build and smoke test pass.
-- Engaging: build with GCC 12.2.0 passes; Catch2 smoke test passes; Slurm job on `mit_quicktest` completes with 4 threads.
-
-## 6. Open items
-
-- Branching workflow, naming conventions, coding style.
-- Debug/sanitizer build verified.
-- algorithms.
-- `include/core/algorithm.hpp`: common `Algorithm::run(n, Oracle&, Proxy* = nullptr)` interface, `name`, `Query`, `QueryBatch`, `AlgorithmResult` (output `Partition` plus `queries_per_round`). Algorithm settings live in concrete algorithm constructors; benchmark runner handles timing and counter snapshots.
-- `tests/test_proxy_algorithm.cpp`: Catch2 checks symmetry, reproducibility, separation at sigma 0, invalid IDs/parameters, cache and reset semantics, thread safety, optional proxy, and output/round accounting.
-
-Implementation details and conventions:
-
-- `SyntheticProxy::score` validates IDs before counting; proxy cache is optional and persists through `reset_counters`, so cold-cache benchmarks should clear it or create a fresh proxy.
-- Access count counts valid `score` calls, computation count counts actual score evaluations; cache hits count as accesses only. Both guarded by mutex.
-- Proxy values are real-valued Gaussian, not clipped to [0,1]; theoretical distribution parameters may later use other families (Uniform/Beta). Scores are *not* calibrated probabilities.
-- A fixed seed hashes the normalized unordered pair to obtain a deterministic Gaussian sample. Real-world proxies will implement the same interface without needing synthetic truth labels.
-- `AlgorithmResult::queries_per_round` should represent sequential dependent batches, not threads. The experiment runner should validate its totals against oracle-query counter deltas and check output size.
-- `Query`/`QueryBatch` are types for future batch execution; this step does not add an oracle batch API.
-
-Verification: standalone C++20 smoke test compiled and ran successfully with g++ (`-Wall -Wextra -Werror -pthread`) and exercised proxy symmetry, cached counts, concurrent access, and a dummy algorithm with optional proxy. New Catch2 suite has **not** yet been run in the actual repository.
-
-Run from repo root after extracting overlay:
-
-```bash
-cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release -j
-./build-release/unit_tests "[proxy],[algorithm]"
-./build-release/unit_tests
-```
-
-Next: integrate and test locally, then a trivial exact representative-query baseline, a single synthetic partition, and one CSV output row; after that add `metrics.hpp` and extend synthetic distributions.
- Scratch and persistent storage paths recorded; output transfer between Engaging and local tested.
-- `requirements.txt` loosened (if still pinned); partner runs setup and a Slurm test.
-- Bibliography mapping of references [2] and [3]; node-ordering direction.
-
----
-
----
-
-## 7. Phase 2 — Core Framework and First End-to-End Experiment (Nov 12, 2026)
-
-### 7.1 Core interfaces implemented
+### 4.1 Core interfaces implemented
 
 Implemented the shared architecture required for the four partition-learning algorithms.
 
@@ -210,7 +154,7 @@ Implemented the shared architecture required for the four partition-learning alg
 - Supports optional proxy information.
 - Provides query-round accounting needed for limited-adaptivity experiments.
 
-### 7.2 Baseline algorithm
+### 4.2 Baseline algorithm
 
 Implemented `RepresentativeBaseline`, a sequential exact-recovery reference algorithm.
 
@@ -229,7 +173,7 @@ Properties:
 - Each sequential oracle query is counted as an adaptive round in the current implementation.
 - Serves as a correctness reference for later algorithms, not a research-paper implementation.
 
-### 7.3 Evaluation and experiment runner
+### 4.3 Evaluation and experiment runner
 
 Implemented:
 - Exact partition recovery.
@@ -244,7 +188,7 @@ The runner accepts command-line parameters for `n`, `k`, `seed`, and output path
 
 Current implementation generates a balanced synthetic partition. Generalized synthetic benchmarks are planned for Phase 3.
 
-### 7.4 Test results
+### 4.4 Test results
 
 Local macOS release build:
 
@@ -286,31 +230,236 @@ The experiment successfully recovered the partition and generated a CSV result.
 
 The recorded runtime is specific to this run and is not a statistically meaningful benchmark.
 
-### 7.5 Issues encountered
+## 5. Milestone 2 — Synthetic benchmarks
 
-| Issue | Cause | Resolution |
-|---|---|---|
-| Baseline test expected 10 queries but observed 9 | Test expectation did not match the baseline's executed query count | Changed expected count to 9; all tests passed |
-| `zsh: command not found: #` | Interactive zsh interpreted pasted comment lines as commands | Ran `setopt interactivecomments` |
+Synthetic benchmarks give us control over two variables that often move
+together in real data: the distribution of cluster sizes and the amount
+of information in a similarity score. To measure sensitivity to imbalance,
+we can fix n, k, and the score distributions while changing cluster
+sizes. To measure sensitivity to side information, we can fix the
+partition and change the score distributions. The representative baseline
+provides an oracle-only reference for those comparisons.
 
-### 7.6 Current limitations
+Hellinger divergence describes how much the two score densities overlap
+and appears in the project's side-information query bounds. AUC answers
+a different question: how often a within-cluster score ranks above a
+between-cluster score. Reporting both lets us build examples with similar
+Hellinger divergence and different ranking quality, as in the Gaussian
+and uniform comparison below.
 
-- Only the representative baseline is implemented; the four research algorithms remain pending.
-- The runner currently generates balanced synthetic partitions only.
-- Gaussian, uniform, and beta proxy benchmark configurations are not yet integrated.
-- Proxy-quality metrics such as Hellinger divergence are not yet implemented.
-- CSV export writes one experiment record and overwrites the specified output file.
-- No large-scale performance experiments completed.
-- Updated end-to-end runner has not yet been tested on Engaging.
+### 5.1 Partition construction
 
-### 7.7 Next milestone: Phase 3
+`include/benchmarks/synthetic_partition.hpp` generates a partition of `n`
+elements with exactly `k` nonempty clusters. It rejects inputs outside
+`1 <= k <= n` and nonpositive or nonfinite power-law exponents. The generator
+assigns cluster labels first, then shuffles them using `std::mt19937_64` seeded
+by `--seed`. Shuffling removes the connection between contiguous element IDs
+and the order in which labels were generated.
 
-Implement:
-1. Configurable synthetic cluster-size distributions.
-2. Gaussian, uniform, and beta similarity distributions.
-3. Squared Hellinger divergence and proxy-quality measurements.
-4. Determinism and distribution validation tests.
-5. Scalable synthetic benchmark generation without dense O(n²) storage.
+| Shape | Allocation |
+|---|---|
+| `balanced` | Assign cyclic labels so sizes differ by at most one |
+| `uniform` | Seed each cluster with one element, then sample each remaining label with equal probability |
+| `zipf` | Seed every cluster, then sample remaining labels with weights proportional to inverse rank |
+| `power-law` | Use inverse rank raised to `--exponent`, which defaults to 2 |
+| `one-large` | Give all remaining elements to cluster 0 after seeding every cluster |
+| `singleton-heavy` | Distribute the remaining elements across the first `max(1, floor(k/4))` clusters |
 
-After Phase 3, begin implementing and testing the four research algorithms.
+The initial assignment guarantees nonempty clusters. For the weighted
+shapes, it also changes the expected size profile when `n` is close to `k`.
+The uniform mode samples assignments after seeding and can yield uneven
+cluster sizes. Balanced mode preserves the original benchmark's assignment
+and shuffle procedure.
 
+### 5.2 Proxy distributions and accounting
+
+`include/core/score_distribution.hpp` defines Gaussian parameters as mean
+and standard deviation, uniform parameters as lower and upper endpoints,
+and Beta parameters as two positive shape parameters. `--within` configures
+scores for pairs in the same cluster and `--between` configures scores for
+pairs in different clusters. The two families can differ. Omitting either
+option leaves that class on the original Gaussian path, with mean 0.8 or
+0.2 and standard deviation 0.1.
+
+`SyntheticProxy` canonicalizes the pair by sorting its IDs and derives a
+seed from the unordered pair and the proxy seed. Configured distributions
+draw from a pair-local random engine. Thus, within a build, the score is
+independent of query order, pair orientation, and cache state. The proxy
+seed defaults to the partition seed and can be set separately with
+`--proxy-seed`. Standard library random distributions and shuffle behavior
+can vary across platforms, so cross-toolchain bit-for-bit reproducibility
+has not been established.
+
+The proxy computes scores lazily. A cache hit increments the access
+counter without incrementing the computation counter. The cache grows with
+the number of pairs accessed when enabled. The representative baseline
+uses the exact oracle exclusively, so both proxy counters stay at zero in
+these runs. The benchmark generates no dense score matrix.
+
+### 5.3 Quality estimates
+
+`include/benchmarks/proxy_quality.hpp` draws `--quality-samples` scores
+per class directly from the configured distributions. Let `p` and `q`
+be the within and between densities. Averaging
+`2 sqrt(p q) / (p + q)` across the equally weighted mixture estimates
+the Hellinger affinity, which is subtracted from 1 to estimate squared
+Hellinger divergence. Averaging `2 min(p,q) / (p + q)` estimates the
+overlap coefficient. The implementation evaluates these weights from
+log-density differences.
+
+For AUC, the code sorts the between-class sample and uses binary searches
+to count how many scores fall below or tie each within-class score. Ties
+count half. The program also reports sample means and variances. For
+`m` samples per class, the report uses O(m) memory and O(m log m) time,
+independent of the number of possible dataset pairs.
+
+### 5.4 Verification
+
+| Check | Observed result |
+|---|---|
+| Original balanced benchmark, n=12, k=3, seed=42 | Exact recovery, 21 oracle queries |
+| Zipf benchmark, n=500, k=20, seed=42, Beta(8,2) versus Beta(2,8) | Exact recovery, 3,497 oracle queries, estimated H² 0.88568 and AUC 0.99838 |
+| Disjoint uniforms on [0.6, 1] and [0, 0.4] | H² 1, overlap 0, AUC 1 |
+| Gaussian and uniform pairs calibrated to theoretical H² ≈ 0.39347 | Estimated H² 0.39348 and 0.39314, with estimated AUC 0.92073 and 0.81618 respectively |
+| Power-law benchmark, n=100,000, k=2, seed=42 | Exact recovery, 119,824 oracle queries |
+| Catch2 suite | 19 test cases and 127 assertions passed |
+
+The matched-divergence comparison used Gaussian means 2 and 0 with
+unit variance and two unit-width uniform intervals offset by 0.39346934.
+It used 100,000 samples per class for each pair.
+
+### 5.5 Issues and limitations
+
+- CMake was unavailable in the implementation environment. The executable
+  was built directly with GCC. A first attempt to compile tests against
+  Catch2's amalgamated source still referenced its modular headers.
+  The successful workaround used temporary test copies that included the
+  amalgamated header. The repository test includes stayed unchanged.
+- Quality estimates are stochastic and currently print to stdout. The
+  baseline CSV records recovery and query accounting. Record the command
+  line if the proxy configuration and sample count need to be reproduced.
+- Extremely concentrated score distributions can reach floating-point
+  limits. The quality reporter rejects nonfinite sampled scores or
+  undefined density differences.
+- The large-n smoke run used only two clusters. It checks the absence of a
+  dense score matrix in that configuration. It provides no scaling claim
+  for larger k or for algorithms that access many distinct pairs.
+
+## 6. Milestone 3 — Black limited-round recovery
+
+A round is a batch of queries that can be chosen before seeing any of
+their answers. The representative baseline can stop comparing an element
+to cluster representatives as soon as it finds a match, but that decision
+depends on the preceding answer. At the other extreme, querying all pairs
+requires one round and spends n(n − 1)/2 queries. Black's algorithm uses
+the round budget to trade between these costs: it pays for all-pairs
+queries within small blocks, then carries only one element per local
+cluster into the next round.
+
+The block size balances the cost of the current batch against the size of
+the remaining problem. A block of size t costs at most t(t − 1)/2 queries
+and contributes at most k representatives. Larger blocks cost more to
+learn locally, but there are fewer of them and therefore fewer
+representatives in the next round. For fixed r, the paper gives a
+worst-case query bound of order n^(1+ε) k^(1−ε), where
+ε = 1/(2^r − 1). The smoke tests below measure the actual cost on
+particular partitions. They illustrate how a small round budget can
+reduce sequential dependencies even when the baseline makes fewer queries.
+
+### 6.1 Paper and interface
+
+`include/algorithms/black_limited_round.hpp` implements the deterministic
+pairwise Algorithm 1 from Section 3 of Black, Mazumdar, and Saha.
+Its constructor takes a positive cluster upper bound and round budget.
+The algorithm receives the element count and oracle interface. The
+synthetic runner knows the true number of clusters from dataset
+configuration and uses it as the default bound. It accepts larger
+bounds and rejects smaller ones. The algorithm assumes that the
+supplied bound is valid. No proxy accesses are made.
+
+[Learning Partitions with Optimal Query and Round Complexities](https://arxiv.org/html/2505.05009v1#S3)
+
+### 6.2 Query schedule and reconstruction
+
+1. Initialize an active list in element-ID order and a union-find parent
+   array over all original IDs.
+2. At each level, let m be the number of active representatives and r the
+   number of remaining rounds. With one remaining round or m ≤ 16k,
+   use a single block and query every unordered active pair.
+3. Otherwise, calculate ε = 1 / (2^r − 1) and use consecutive blocks of
+   size at most ceil(3k(m/k)^ε). Only the final block can be short.
+   Query every unordered pair inside each block in a single logical round.
+4. For each positive answer, merge the roots and keep the smaller ID as
+   the root. All queries in the round still execute. After the round, keep
+   exactly the roots as active representatives and repeat with one fewer
+   round. A singleton active set requires zero further queries.
+5. Resolve the root of every original element to produce its cluster
+   label. When local components merge in later rounds, their earlier
+   member elements inherit the final representative through union-find.
+
+Every local component is established by querying every pair within its
+block. Each true cluster present in a block contributes one representative,
+so subsequent rounds retain evidence from every cluster. Merging
+representatives joins their entire local components. The fixed input order,
+block boundaries, and root selection make the schedule deterministic.
+
+### 6.3 Implementation decisions
+
+- Pair iteration streams each fixed batch, avoiding a separate vector of
+  all scheduled pairs. Answers update union-find during iteration, while
+  the active list and loop boundaries stay fixed. The next batch depends
+  on those answers only after the current batch finishes.
+- The base-case check uses ceiling division by 16 to avoid multiplying k
+  by 16 in integer arithmetic. The exponent is evaluated using the
+  reciprocal power of two. For budgets above long-double precision its
+  contribution is treated as zero, avoiding overflow from forming 2^r.
+- The algorithm follows the paper's all-pairs schedule, including
+  repeated pairs across rounds. The exact oracle reports total queries
+  and distinct pairs separately. Its distinct-pair tracking still uses
+  memory proportional to the number of unique pairs.
+- `--algorithm black_limited_round` enables the implementation.
+  `--rounds` defaults to 2. Black CSVs append the requested budget,
+  cluster bound, and pipe-delimited batch sizes to the existing columns.
+  The baseline remains the default and retains its original CSV schema.
+  Each run overwrites its output path.
+
+### 6.4 Verification
+
+| Configuration | Queries | Unique pairs | Batches | Exact recovery |
+|---|---:|---:|---|---|
+| Baseline, balanced n=500, k=10, seed=42 | 2,740 | 2,740 | 2,740 single-query rounds | Yes |
+| Black, same dataset, bound=10, budget=3 | 17,605 | 17,155 | 12,655 / 4,950 | Yes |
+| Black, balanced n=4,096, k=2, seed=42, bound=2, budget=3 | 43,159 | 42,924 | 34,776 / 8,058 / 325 | Yes |
+
+For n=500, the first round uses nine blocks of 53 and one block of 23.
+The 100 surviving representatives satisfy the 16k base case, so the
+second batch queries all 4,950 representative pairs and the third
+allowed round goes unused. Within each first-round block, the second
+round repeats the 45 pairs among its ten representatives, for 450 repeats
+across the ten blocks.
+
+The GCC/Catch2 suite passed 23 cases and 526 assertions. Added checks
+covered the all-pairs base cases, singleton recovery, invalid
+constructor parameters, exact batch sizes, repeated-pair accounting,
+and a run that uses all three rounds. The randomized test exercised
+128 combinations across four partition shapes, eight seeds, and four
+budgets, including a budget of 128. It checked exact recovery, the
+round cap, and agreement between batch sums and oracle counts.
+The CLI rejected a cluster bound smaller than the configured k.
+
+### 6.5 Issues and follow-up
+
+- The tested implementation executes queries serially within each logical
+  round. The recorded round count measures adaptivity. Parallel execution
+  and speedup still require separate implementation and measurement.
+- The representative baseline can use fewer queries on a particular
+  dataset even when Black uses far fewer rounds. The smoke runs verify
+  behavior and accounting. Comparing with the paper's worst-case query
+  bound requires sweeps over n, k, and round budgets.
+- Streaming the pair schedule avoids storing an explicit batch. For
+  large all-pairs base cases, the oracle's distinct-pair set can still
+  grow quadratically. Treat runtime and memory measurements as properties
+  of both the algorithm and the instrumentation.
+- CMake and MIT Engaging verification remain pending for this milestone.
+  The recorded tests used a direct GCC build and the same temporary
+  Catch2 amalgamation workflow as Milestone 2.

@@ -45,14 +45,18 @@ struct BaselineExperimentResult {
     std::uint64_t proxy_computations = 0;
     std::size_t adaptive_rounds = 0;
     double runtime_ms = 0.0;
+    std::string algorithm;
+    std::vector<std::size_t> queries_per_round;
+    std::size_t requested_rounds = 0;
+    std::size_t cluster_bound = 0;
 };
 
-inline BaselineExperimentResult run_baseline_experiment(const BaselineExperiment& cfg) {
+inline BaselineExperimentResult run_experiment(const BaselineExperiment& cfg,
+                                               const Algorithm& algorithm) {
     const Partition truth = make_synthetic_partition(cfg.n, cfg.k, cfg.seed, cfg.shape, cfg.exponent);
     ExactOracle oracle(truth);
     SyntheticProxy proxy(truth, {.seed = cfg.proxy_seed.value_or(cfg.seed), .cache = true,
                                  .within = cfg.within, .between = cfg.between});
-    RepresentativeBaseline algorithm;
     const auto started = std::chrono::steady_clock::now();
     const auto answer = algorithm.run(cfg.n, oracle, &proxy);
     const auto finished = std::chrono::steady_clock::now();
@@ -65,7 +69,12 @@ inline BaselineExperimentResult run_baseline_experiment(const BaselineExperiment
     return {cfg, evaluate_partition(truth, answer.partition), oracle.query_count(),
             oracle.unique_query_count(), proxy.access_count(), proxy.computation_count(),
             answer.adaptive_rounds(),
-            std::chrono::duration<double, std::milli>(finished - started).count()};
+            std::chrono::duration<double, std::milli>(finished - started).count(),
+            std::string(algorithm.name()), answer.queries_per_round};
+}
+
+inline BaselineExperimentResult run_baseline_experiment(const BaselineExperiment& cfg) {
+    return run_experiment(cfg, RepresentativeBaseline{});
 }
 
 inline void write_baseline_csv(const std::filesystem::path& path,
@@ -75,15 +84,26 @@ inline void write_baseline_csv(const std::filesystem::path& path,
     if (!out) throw std::runtime_error("Cannot open output CSV: " + path.string());
     out << "algorithm,dataset,n,k,seed,oracle_queries,unique_oracle_queries,"
            "proxy_accesses,proxy_computations,adaptive_rounds,runtime_ms,"
-           "exact_recovery,pairwise_precision,pairwise_recall,pairwise_f1,adjusted_rand_index\n";
-    out << "representative_baseline," << r.config.shape << "_synthetic," << r.config.n << ','
+           "exact_recovery,pairwise_precision,pairwise_recall,pairwise_f1,adjusted_rand_index";
+    if (r.requested_rounds != 0) out << ",requested_rounds,cluster_bound,queries_per_round";
+    out << '\n';
+    out << r.algorithm << ',' << r.config.shape << "_synthetic," << r.config.n << ','
         << r.config.k << ',' << r.config.seed << ',' << r.oracle_queries << ','
         << r.unique_oracle_queries << ',' << r.proxy_accesses << ','
         << r.proxy_computations << ',' << r.adaptive_rounds << ','
         << std::setprecision(17) << r.runtime_ms << ','
         << (r.metrics.exact_recovery ? 1 : 0) << ','
         << r.metrics.pairwise_precision << ',' << r.metrics.pairwise_recall << ','
-        << r.metrics.pairwise_f1 << ',' << r.metrics.adjusted_rand_index << '\n';
+        << r.metrics.pairwise_f1 << ',' << r.metrics.adjusted_rand_index;
+    if (r.requested_rounds != 0) {
+        out << ',' << r.requested_rounds << ',' << r.cluster_bound << ',';
+        const char* separator = "";
+        for (const auto count : r.queries_per_round) {
+            out << separator << count;
+            separator = "|";
+        }
+    }
+    out << '\n';
     if (!out) throw std::runtime_error("Failed to write CSV: " + path.string());
 }
 

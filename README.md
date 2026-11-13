@@ -17,7 +17,7 @@ We study the effects of:
 
 ## Algorithms
 
-We implement and compare four algorithms:
+The representative baseline and Black et al.’s limited-round algorithm are implemented. The remaining three research algorithms below are planned:
 
 1. Limited Adaptive Rounds: The deterministic algorithm of Black et al. \[1\], with configurable adaptivity.
 2. Edge Ordering: Orders element pairs by increasing proxy similarity and performs oracle queries accordingly \[3\].
@@ -28,46 +28,15 @@ The Node Ordering algorithm is approximate, while the other algorithms target ex
 
 ## Repository Structure
 
-```text
-.
-├── CMakeLists.txt
-├── README.md
-├── requirements.txt    # Python analysis dependencies
-│
-├── include/
-│   ├── core/           # Partition, oracle, proxy, metrics, interfaces
-│   ├── algorithms/     # Algorithm implementations
-│   ├── generators/     # Synthetic data and proxy generators
-│   └── benchmarks/     # Experiment runner
-│
-├── src/
-│   ├── algorithms/     # Algorithm source files
-│   ├── generators/     # Data generation implementations
-│   ├── oracle/         # Oracle implementations
-│   ├── proxy/          # Proxy implementations
-│   └── main.cpp
-│
-├── tests/              # Unit and integration tests
-├── configs/            # Experiment configurations
-├── datasets/
-│   ├── raw/            # Original datasets
-│   └── processed/      # Preprocessed datasets
-│
-├── docs/
-│   ├── tasks.md        # Task tracker and project plan
-│   ├── digest.md       # Short summary of the current system
-│   └── archive.md      # Detailed setup history, run steps, issue log
-│
-├── scripts/
-│   ├── setup_linux.sh  # One-shot Linux environment setup
-│   └── submit_slurm.sh # Slurm job script (Engaging)
-├── results/
-│   ├── raw/            # Raw experiment outputs
-│   ├── processed/      # Aggregated results
-│   └── plots/          # Generated figures
-│
-└── analysis/           # Python analysis and plotting scripts
-```
+| Path | Contents |
+|---|---|
+| `include/core/` | Partition, oracle, proxy, and evaluation interfaces |
+| `include/algorithms/` | Representative baseline and Black limited-round recovery |
+| `include/benchmarks/` | Synthetic partition generator, proxy quality report, and experiment runner |
+| `src/main.cpp` | Experiment CLI |
+| `tests/` | Catch2 tests |
+| `scripts/` | Linux setup and Slurm submission |
+| `datasets/`, `results/` | Dataset and output directories |
 
 ## Requirements
 
@@ -167,15 +136,17 @@ Run the unit tests:
 ./build-release/unit_tests
 ```
 
-Run an experiment using a configuration file:
+Run Black et al. on the balanced synthetic benchmark:
 
 ```bash
-./build-release/partition_experiment \
-  --config configs/synthetic_scaling.json \
-  --output results/raw/results.csv
+./build-release/partition_experiment --algorithm black_limited_round \
+  --n 500 --k 10 --seed 42 --rounds 3 \
+  --output results/raw/black-r3.csv
 ```
 
-Experiment configurations specify the dataset, partition parameters, proxy distribution, algorithm, and execution settings.
+The representative baseline is the default algorithm. For Black,
+`--k-bound` defaults to `--k`. The CSV records the actual round count
+and query counts by batch. Use `--help` for partition shapes and proxy options.
 
 ### Running on Engaging
 
@@ -211,21 +182,21 @@ We record oracle queries, proxy queries, adaptive rounds, runtime, and clusterin
 
 ## Documentation
 
-Project documentation lives in `docs/`:
-
-- [`docs/digest.md`](docs/digest.md): short summary of the current system, key commands, and conventions. Start here.
-- [`docs/tasks.md`](docs/tasks.md): task tracker organized by phase, with status, priorities, and division of work.
-- [`docs/archive.md`](docs/archive.md): detailed record of setup steps, how to run things on macOS and Engaging, the process log, and issues encountered with their fixes.
+| Document | What it covers |
+|---|---|
+| [digest.md](digest.md) | Start here for implemented features, build and run commands, verified results, and next steps. |
+| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Section 6 explains Black’s round/query tradeoff, implementation, tests, and known limitations. |
+| [tasks.md](tasks.md) | Project plan, phase checklists, and division of work. |
 
 ## Reproducibility
 
-Experiments use configurable random seeds and JSON configuration files. Results should record relevant parameters, compiler settings, and execution environment information (compiler version and flags, CPU model, git commit hash) to facilitate reproducibility.
+Experiments use configurable random seeds and command-line arguments. Results should record relevant parameters, compiler settings, and execution environment information (compiler version and flags, CPU model, git commit hash) to facilitate reproducibility.
 
 Large-scale experiments are intended to run on the [MIT Engaging cluster](https://orcd.mit.edu/resources/about-engaging-cluster), using Slurm for job scheduling.
 
 ## References
 
-\[1\] Black et al. (2025). Learning with Limited Adaptive Rounds.
+\[1\] Black, Mazumdar, and Saha (2025). [Learning Partitions with Optimal Query and Round Complexities](https://arxiv.org/abs/2505.05009).
 
 \[2\] Mazumdar et al. (2017). Query Complexity of Clustering with Side Information.
 
