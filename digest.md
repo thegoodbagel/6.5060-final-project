@@ -81,11 +81,22 @@ scores and when to query the oracle. The smoke run recovered exactly
 with 870 oracle calls versus 997 for the baseline. Statistical
 assignments can produce recovery errors on other inputs.
 
+## Synthetic comparison suite
+
+```bash
+python3 scripts/run_suite.py --config configs/synthetic_smoke.json \
+  --output results/raw/synthetic-smoke.csv
+```
+
+The smoke suite produces 20 rows. Two Side Information runs on the
+overlapping Zipf dataset missed exact recovery. Two repeats matched on
+all non-timing fields in the same build.
+
 ## Next
 
 - Verify the updated CMake build and Slurm run on MIT Engaging.
 - Sweep n, k, and round budgets on fixed seeds and report total and unique
   query counts alongside actual rounds.
-- Run same-seed comparisons across all four research algorithms and the baseline.
+- Expand the same-seed comparisons into controlled sweeps and prepare Engaging jobs.
 
 See `archive.md` for implementation history and `tasks.md` for the project plan.

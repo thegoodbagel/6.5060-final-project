@@ -667,3 +667,49 @@ The paper's asymptotic bound applies under its distribution and
 concentration assumptions. The smoke tests establish behavior on the
 tested inputs and give no empirical recovery guarantee across scores,
 seeds, or problem sizes. Formal comparisons are deferred to Engaging.
+
+On macOS, CTest passed in 0.13 s. The reported side-information smoke run
+at n=500, k=3, seed=42 recovered exactly with 856 queries and rounds,
+F1 = 1, and ARI = 1. The direct GCC run previously recorded 870 queries.
+The supplied Mac output does not include the proxy flags or compiler
+version, so the cause of the difference remains unverified.
+
+## 10. Milestone 7 — Reproducible synthetic comparisons
+
+Comparing algorithms on the same dataset and seed controls the partition
+and the pairwise scores within a build. Changing either would mix algorithm
+differences with input variation. The suite groups runs by dataset ID and
+seed, with the same proxy settings for every method on that input.
+
+### 10.1 Runner and output
+
+`scripts/run_suite.py` reads JSON and invokes the existing single-run CLI
+for each dataset, seed, and algorithm combination. Each invocation writes
+a temporary CSV. The runner combines the rows, keeps algorithm-specific
+fields such as Black's requested rounds and Edge Ordering's preprocessing
+time, and records the config and executable hashes, Git revision, OS,
+architecture, and OpenMP environment setting. The executable hash
+identifies the actual binary even if it was built from a different source
+state than the current checkout.
+
+The final CSV replaces the destination only after all runs finish. Exit
+status 2 means the experiment completed with a recovery miss, so its
+accuracy and query metrics are retained. Other failures stop the suite
+with the dataset, seed, and algorithm in the error message.
+
+### 10.2 Verification
+
+The default config runs the baseline and four research algorithms on two
+datasets and two seeds, for 20 rows. Repeating the suite with the same GCC
+binary reproduced every non-timing column. An invalid cluster shape
+returned an error and preserved the existing output.
+
+| Zipf overlap, Side Information | Queries | Pairwise F1 | ARI |
+|---|---:|---:|---:|
+| Seed 42 | 472 | 0.7183 | 0.5614 |
+| Seed 43 | 643 | 0.8287 | 0.7521 |
+
+The other 18 runs recovered exactly. These two misses show why recovery
+must be evaluated alongside query counts for the Monte Carlo algorithm.
+The smoke config establishes end-to-end behavior. Larger sweeps, measured
+hardware and memory metadata, and Slurm arrays remain future work.

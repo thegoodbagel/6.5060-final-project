@@ -5,7 +5,7 @@
 # From the repo root, on the login node (the directory logs/ must exist first):
 #   mkdir -p logs
 #   sbatch scripts/submit_slurm.sh                       # smoke test: run with no args
-#   sbatch scripts/submit_slurm.sh --config configs/smoke_test.json \
+#   sbatch scripts/submit_slurm.sh --n 500 --k 3 --algorithm node_ordering \
 #          --output results/raw/smoke.csv                # arguments go to the executable
 #
 # Override resources at submit time without editing this file, e.g.:

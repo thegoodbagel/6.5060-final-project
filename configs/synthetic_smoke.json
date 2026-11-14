@@ -1,0 +1,16 @@
+{
+  "datasets": [
+    {"id": "balanced-separated", "n": 500, "k": 3, "shape": "balanced",
+     "within": "uniform,0.8,0.81", "between": "uniform,0.1,0.11"},
+    {"id": "zipf-overlap", "n": 300, "k": 5, "shape": "zipf",
+     "within": "gaussian,0.65,0.2", "between": "gaussian,0.35,0.2"}
+  ],
+  "seeds": [42, 43],
+  "algorithms": [
+    {"name": "representative_baseline"},
+    {"name": "black_limited_round", "rounds": 2},
+    {"name": "edge_ordering"},
+    {"name": "node_ordering"},
+    {"name": "side_information"}
+  ]
+}

@@ -148,6 +148,19 @@ The representative baseline is the default algorithm. For Black,
 `--k-bound` defaults to `--k`. The CSV records the actual round count
 and query counts by batch. Use `--help` for partition shapes and proxy options.
 
+### Running a synthetic comparison
+
+```bash
+python3 scripts/run_suite.py --config configs/synthetic_smoke.json \
+  --output results/raw/synthetic-smoke.csv
+```
+
+Build the C++ executable first. The Python wrapper uses the standard
+library and accepts `--binary` to select another executable. The checked-in
+config runs all five methods on two datasets with two seeds. The combined
+CSV retains statistical recovery misses and records the experiment settings.
+Use the single-run CLI for individual experiments.
+
 ### Running on Engaging
 
 Never run heavy experiments on the login node. Submit them through Slurm:
@@ -185,12 +198,12 @@ We record oracle queries, proxy queries, adaptive rounds, runtime, and clusterin
 | Document | What it covers |
 |---|---|
 | [digest.md](digest.md) | Start here for implemented features, build and run commands, verified results, and next steps. |
-| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6–9 cover Black’s limited-round algorithm, Edge Ordering, Node Ordering, and Side-Information-Assisted Learning, including their implementations and tests. |
+| [archive.md](archive.md) | Setup and experiment history. Section 4 covers the framework and baseline. Section 5 explains synthetic partition shapes, proxy distributions, and quality estimates. Sections 6–9 cover Black’s limited-round algorithm, Edge Ordering, Node Ordering, and Side-Information-Assisted Learning, including their implementations and tests. Section 10 covers the comparison runner. |
 | [tasks.md](tasks.md) | Project plan, phase checklists, and division of work. |
 
 ## Reproducibility
 
-Experiments use configurable random seeds and command-line arguments. Results should record relevant parameters, compiler settings, and execution environment information (compiler version and flags, CPU model, git commit hash) to facilitate reproducibility.
+Experiments use configurable random seeds and command-line arguments. The suite also accepts checked-in JSON configurations. Results should record relevant parameters, compiler settings, and execution environment information (compiler version and flags, CPU model, git commit hash) to facilitate reproducibility.
 
 Large-scale experiments are intended to run on the [MIT Engaging cluster](https://orcd.mit.edu/resources/about-engaging-cluster), using Slurm for job scheduling.
 

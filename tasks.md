@@ -11,7 +11,7 @@ Legend: `[x]` done · `[ ]` not done · **Status** is per phase. Last updated: N
 | 2. Common experimental framework | Nov 13–15 | Not started |
 | 3. Synthetic benchmark generation | Nov 14–17 | Not started |
 | 4. Four algorithms (critical path) | Nov 15–20 | Not started |
-| 5. Experiment runner and reproducibility | Nov 17–21 | Not started |
+| 5. Experiment runner and reproducibility | Nov 17–21 | In progress |
 | 6. Real-world benchmark (WDC) | Nov 20–24 | Not started |
 | 7. Parallelism and performance | Nov 21–26 | Not started |
 | 8. Main experimental evaluation | Nov 23–29 | Not started |
@@ -174,12 +174,12 @@ Legend: `[x]` done · `[ ]` not done · **Status** is per phase. Last updated: N
 
 ## Phase 5: Experiment Runner and Reproducibility
 
-**Status: not started.** Can overlap with Phase 4. Deliverable: one command runs a configured experiment and writes a reproducible CSV.
+**Status: in progress.** The local synthetic JSON suite writes a combined CSV.
 
-- [ ] JSON config parsing (dataset, algorithm, proxy parameters, n, k, distributions, seeds, threads)
-- [ ] Runner: initialize dataset/oracle/proxy, run algorithm, evaluate, collect metrics, save
+- [x] JSON config parsing for synthetic datasets, algorithms, proxy parameters, and seeds
+- [x] Runner: initialize dataset/oracle/proxy, run algorithm, evaluate, collect metrics, save
 - [ ] CSV logging: algorithm, dataset, n, k, cluster distribution, proxy and H², seed, rounds, oracle queries, proxy queries, preprocessing/algorithm/total runtime, memory, accuracy, threads, git commit, hardware metadata
-- [ ] Repeat runs to verify determinism and fixed-seed reproducibility
+- [x] Repeat the smoke suite to verify same-build non-timing reproducibility
 - [ ] Save all configs; batch launch scripts; Slurm job arrays
 
 ---
